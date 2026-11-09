@@ -25,7 +25,7 @@ P1=$!
 sleep 1
 timeout 45 $G -- --test-bot --rol=ilk --port=$PORT > "$TMP/ilk.log" 2>&1 &
 P2=$!
-timeout 45 $G -- --test-bot --rol=ikinci --port=$PORT > "$TMP/ikinci.log" 2>&1 &
+timeout 45 $G -- --test-bot --rol=ikinci --port=$PORT --adres=ws://127.0.0.1:$((PORT+1)) > "$TMP/ikinci.log" 2>&1 &
 P3=$!
 timeout 45 $G -- --test-bot --rol=menu --port=$PORT > "$TMP/menu1.log" 2>&1 &
 P4=$!

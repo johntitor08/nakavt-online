@@ -12,6 +12,8 @@ signal event_received(ev: Dictionary)
 signal disconnected
 
 const VERSION := 2
+const DualPeer := preload("res://scripts/dual_peer.gd")
+const WS_PORT_OFFSET := 1
 const DEFAULT_PORT := 7800
 const MAX_PEERS := 256
 const CHANNELS := 5
@@ -62,7 +64,17 @@ func start_server(port: int) -> Error:
 	if err != OK:
 		return err
 	peer.host.compress(ENetConnection.COMPRESS_RANGE_CODER)
-	multiplayer.multiplayer_peer = peer
+	# Tarayıcılar UDP kullanamaz: aynı odalara WebSocket ile (port + 1, TCP) bağlanırlar.
+	var ws := WebSocketMultiplayerPeer.new()
+	var ws_err := ws.create_server(port + WS_PORT_OFFSET)
+	if ws_err == OK:
+		var dual := DualPeer.new()
+		dual.setup(peer, ws)
+		multiplayer.multiplayer_peer = dual
+		print("[sunucu] tarayıcılar için WebSocket: %d" % (port + WS_PORT_OFFSET))
+	else:
+		push_warning("WebSocket portu açılamadı (hata %d), yalnızca UDP" % ws_err)
+		multiplayer.multiplayer_peer = peer
 	is_server = true
 	print("[sunucu] port %d dinleniyor, sürüm %d" % [port, VERSION])
 	return OK
@@ -70,13 +82,20 @@ func start_server(port: int) -> Error:
 
 func connect_to(address: String, port: int, player_name: String, code: String) -> Error:
 	leave()
+	_hello_name = player_name
+	_hello_code = code
+	if OS.has_feature("web") or address.begins_with("ws://") or address.begins_with("wss://"):
+		var ws := WebSocketMultiplayerPeer.new()
+		var ws_err := ws.create_client(address)
+		if ws_err != OK:
+			return ws_err
+		multiplayer.multiplayer_peer = ws
+		return OK
 	var peer := ENetMultiplayerPeer.new()
 	var err := peer.create_client(address, port, CHANNELS)
 	if err != OK:
 		return err
 	peer.host.compress(ENetConnection.COMPRESS_RANGE_CODER)
-	_hello_name = player_name
-	_hello_code = code
 	multiplayer.multiplayer_peer = peer
 	return OK
 

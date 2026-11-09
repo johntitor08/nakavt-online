@@ -77,7 +77,7 @@ func _build_ui() -> void:
 
 	_name_edit = _field(col, "İsim", "Boksör adın")
 	_name_edit.max_length = Net.MAX_NAME
-	_addr_edit = _field(col, "Sunucu", DEFAULT_ADDRESS)
+	_addr_edit = _field(col, "Sunucu", "Otomatik" if OS.has_feature("web") else DEFAULT_ADDRESS)
 	_code_edit = _field(col, "Oda kodu", "Boş bırakırsan rastgele rakip")
 	_code_edit.max_length = Net.MAX_CODE
 
@@ -157,12 +157,28 @@ func _start_offline() -> void:
 func _start_search() -> void:
 	_save_settings()
 	var address := _addr_edit.text.strip_edges()
+	if OS.has_feature("web") and not address.begins_with("ws"):
+		_status.text = "Sunucu adresi alınıyor…"
+		_set_searching(true)
+		WebAddress.fetch(self, _on_web_address)
+		return
+	_connect(address if not address.is_empty() else DEFAULT_ADDRESS)
+
+
+func _on_web_address(address: String) -> void:
+	if not _searching:
+		return
 	if address.is_empty():
-		address = DEFAULT_ADDRESS
+		_on_error("Sunucu adresi alınamadı. Sunucu kapalı olabilir.")
+		return
+	_connect(address)
+
+
+func _connect(address: String) -> void:
 	var host := address
 	var port := Net.DEFAULT_PORT
 	var colon := address.rfind(":")
-	if colon > 0:
+	if colon > 0 and not address.begins_with("ws"):
 		host = address.left(colon)
 		port = address.substr(colon + 1).to_int()
 	if port <= 0 or port > 65535:

@@ -36,3 +36,6 @@ systemctl --user enable --now nakavt-sunucu
 sleep 3
 systemctl --user --no-pager status nakavt-sunucu | head -5
 ss -ulnp | grep ":$PORT " || echo "UYARI: $PORT/UDP dinlenmiyor, logu kontrol et: journalctl --user -u nakavt-sunucu"
+
+echo "== Tarayıcı tüneli kuruluyor"
+"$D/deploy/web-tunel-kur.sh"
